@@ -21,6 +21,17 @@ var (
 	ErrNon200Response = errors.New("Non 200 Response found")
 )
 
+func router(req events.APIGatewayProxyRequest) {
+	switch req.HTTPMethod {
+		case "GET":
+			return handler(req)
+		case "POST":
+			return handler(req)
+		default:
+			return clientError(http.StatusMethodNotAllowed)
+		}
+}
+
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	resp, err := http.Get(DefaultHTTPGetAddress)
 	if err != nil {
@@ -47,5 +58,5 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func main() {
-	lambda.Start(handler)
+	lambda.Start(router)
 }
