@@ -1,17 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"log"
+	"net/http"
+	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 	
@@ -36,7 +38,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 		case "GET":
 			return get_handler(req, svc)
 		case "POST":
-			return handler(req)
+			return post_handler(req, svc)
 		default:
 			return events.APIGatewayProxyResponse{}, errors.New("StatusMethodNotAllowed")
 	}
@@ -48,10 +50,38 @@ type Schedule struct {
 	Hours     string
 }
 
-func post_handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func post_handler(request events.APIGatewayProxyRequest, svc *dynamodb.DynamoDB) (events.APIGatewayProxyResponse, error) {
 	// TODO: put item to dynamodb
+	var schedule Schedule
+	json.Unmarshal([]byte(request.Body), &schedule)
+	schedule.School_id, _ = strconv.Atoi(request.PathParameters["sid"])
+	tableName := "comroom_schedule"
+
+	log.Printf("schedule: %v", schedule)
+
+	item, err := dynamodbattribute.MarshalMap(schedule)
+    if err != nil {
+        log.Fatalf("Got error marshalling map: %s", err)
+    }
+	log.Printf("item: %v", item)
+
+    // Create item in table Movies
+    input := &dynamodb.PutItemInput{
+        Item: item,
+        TableName: aws.String(tableName),
+    }
+
+    _, err = svc.PutItem(input)
+    if err != nil {
+        log.Fatalf("Got error calling PutItem: %s", err)
+    }
+
+    school_id := strconv.Itoa(schedule.School_id)
+
+    fmt.Println("Successfully added '" + schedule.Hours + "' (" + school_id + ") to table " + tableName)
+
 	return events.APIGatewayProxyResponse{
-		Body:       fmt.Sprintf("Hello, %v", request.Body),
+		Body:       fmt.Sprintf("Post Good, %v", request.Body),
 		StatusCode: 200,
 	}, nil
 }
@@ -63,7 +93,7 @@ func get_handler(request events.APIGatewayProxyRequest, svc *dynamodb.DynamoDB) 
 	result, err := svc.GetItem(&dynamodb.GetItemInput{
 		TableName: aws.String(tableName),
 		Key: map[string]*dynamodb.AttributeValue{
-			"school_id": {
+			"School_id": {
 				N: aws.String(school_id),
 			},
 		},
@@ -91,7 +121,7 @@ func get_handler(request events.APIGatewayProxyRequest, svc *dynamodb.DynamoDB) 
 
 
 	return events.APIGatewayProxyResponse{
-		Body:       fmt.Sprintf("Hello, %v", request.Body),
+		Body:       fmt.Sprintf("Get Good, %v", request.Body),
 		StatusCode: 200,
 	}, nil
 }
