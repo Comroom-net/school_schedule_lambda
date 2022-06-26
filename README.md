@@ -5,7 +5,7 @@ This is a sample template for school-schedule-api - Below is a brief explanation
 ```bash
 .
 ├── README.md                   <-- This instructions file
-├── hello-world                 <-- Source code for a lambda function
+├── Schedule                    <-- Source code for a lambda function
 │   ├── main.go                 <-- Lambda function code
 │   └── main_test.go            <-- Unit tests
 │   └── Dockerfile              <-- Dockerfile
